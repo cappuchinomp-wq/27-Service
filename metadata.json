@@ -1,0 +1,6 @@
+{
+  "name": "Twenty-Seven Building OS",
+  "description": "ระบบบริหารจัดการอาคาร Twenty-Seven - แจ้งซ่อม, PM, อะไหล่คงคลัง, ค่าใช้จ่าย และจัดการสิทธิ์ผู้ใช้งาน",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

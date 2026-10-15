@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control for building operations",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 254 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "role": {
+          "type": "string",
+          "enum": ["manager", "reception", "technician"]
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "displayName", "role"]
+    },
+    "Incident": {
+      "title": "Incident",
+      "description": "Building incident or maintenance request ticket",
+      "type": "object",
+      "properties": {
+        "incidentNumber": { "type": "string", "maxLength": 30 },
+        "location": { "type": "string", "maxLength": 200 },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "priority": {
+          "type": "string",
+          "enum": ["normal", "urgent", "critical"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "in_progress", "completed", "cancelled"]
+        },
+        "reportedByUid": { "type": "string", "maxLength": 128 },
+        "reportedByName": { "type": "string", "maxLength": 100 },
+        "assignedToUid": { "type": "string", "maxLength": 128 },
+        "assignedToName": { "type": "string", "maxLength": 100 },
+        "targetCompletionDate": { "type": "string", "maxLength": 50 },
+        "recurrenceCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["incidentNumber", "location", "description", "priority", "status", "reportedByUid"]
+    },
+    "MaintenancePlan": {
+      "title": "MaintenancePlan",
+      "description": "Scheduled preventive maintenance (PM) plan for building equipment",
+      "type": "object",
+      "properties": {
+        "equipmentName": { "type": "string", "maxLength": 200 },
+        "taskDescription": { "type": "string", "maxLength": 1000 },
+        "frequency": {
+          "type": "string",
+          "enum": ["daily", "weekly", "monthly", "quarterly", "yearly"]
+        },
+        "nextDueDate": { "type": "string", "maxLength": 50 },
+        "daysRemaining": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": ["scheduled", "completed", "overdue"]
+        },
+        "assignedTo": { "type": "string", "maxLength": 100 },
+        "lastHistory": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["equipmentName", "taskDescription", "frequency", "nextDueDate", "status"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "Spare parts inventory stock tracking",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 200 },
+        "location": { "type": "string", "maxLength": 200 },
+        "quantity": { "type": "number" },
+        "minThreshold": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 50 },
+        "status": {
+          "type": "string",
+          "enum": ["ok", "low"]
+        },
+        "lastUpdatedBy": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "location", "quantity", "minThreshold", "unit", "status"]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "Repair and maintenance expenses record",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "maxLength": 50 },
+        "equipmentOrLocation": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "responsibleParty": { "type": "string", "maxLength": 100 },
+        "amount": { "type": "number" },
+        "recurrenceText": { "type": "string", "maxLength": 100 },
+        "incidentId": { "type": "string", "maxLength": 128 },
+        "createdByUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["date", "equipmentOrLocation", "description", "responsibleParty", "amount", "createdByUid"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with role assignment"
+    },
+    "/incidents/{incidentId}": {
+      "schema": "Incident",
+      "description": "Repair and incident tracking documents"
+    },
+    "/maintenance/{maintenanceId}": {
+      "schema": "MaintenancePlan",
+      "description": "Preventive maintenance scheduled tasks"
+    },
+    "/inventory/{inventoryId}": {
+      "schema": "InventoryItem",
+      "description": "Stock of spare parts and replacement equipment"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "ExpenseRecord",
+      "description": "Maintenance and repair cost records"
+    }
+  }
+}

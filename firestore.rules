@@ -1,0 +1,171 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection test doc
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isBootstrapManager() {
+      return isSignedIn() &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower() == 'cappuchino.mp@gmail.com';
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasUserDoc() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isManager() {
+      return isBootstrapManager() || (isSignedIn() && hasUserDoc() && getUserData().role == 'manager');
+    }
+
+    function isReception() {
+      return isSignedIn() && hasUserDoc() && getUserData().role == 'reception';
+    }
+
+    function isTechnician() {
+      return isSignedIn() && hasUserDoc() && getUserData().role == 'technician';
+    }
+
+    // User entity validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 254 &&
+        data.displayName is string && data.displayName.size() <= 100 &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+        data.role in ['manager', 'reception', 'technician'];
+    }
+
+    // Incident entity validation
+    function isValidIncident(data) {
+      return data.keys().hasAll(['incidentNumber', 'location', 'description', 'priority', 'status', 'reportedByUid']) &&
+        data.keys().hasOnly(['incidentNumber', 'location', 'title', 'description', 'priority', 'status', 'reportedByUid', 'reportedByName', 'assignedToUid', 'assignedToName', 'targetCompletionDate', 'recurrenceCount', 'createdAt', 'updatedAt']) &&
+        data.incidentNumber is string && data.incidentNumber.size() <= 30 &&
+        data.location is string && data.location.size() <= 200 &&
+        (!('title' in data) || (data.title is string && data.title.size() <= 200)) &&
+        data.description is string && data.description.size() <= 2000 &&
+        data.priority in ['normal', 'urgent', 'critical'] &&
+        data.status in ['open', 'in_progress', 'completed', 'cancelled'] &&
+        data.reportedByUid is string && data.reportedByUid.size() <= 128 &&
+        (!('reportedByName' in data) || (data.reportedByName is string && data.reportedByName.size() <= 100)) &&
+        (!('assignedToUid' in data) || (data.assignedToUid is string && data.assignedToUid.size() <= 128)) &&
+        (!('assignedToName' in data) || (data.assignedToName is string && data.assignedToName.size() <= 100)) &&
+        (!('targetCompletionDate' in data) || (data.targetCompletionDate is string && data.targetCompletionDate.size() <= 50)) &&
+        (!('recurrenceCount' in data) || (data.recurrenceCount is number && data.recurrenceCount >= 0));
+    }
+
+    // Maintenance entity validation
+    function isValidMaintenance(data) {
+      return data.keys().hasAll(['equipmentName', 'taskDescription', 'frequency', 'nextDueDate', 'status']) &&
+        data.keys().hasOnly(['equipmentName', 'taskDescription', 'frequency', 'nextDueDate', 'daysRemaining', 'status', 'assignedTo', 'lastHistory', 'createdAt', 'updatedAt']) &&
+        data.equipmentName is string && data.equipmentName.size() <= 200 &&
+        data.taskDescription is string && data.taskDescription.size() <= 1000 &&
+        data.frequency in ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] &&
+        data.nextDueDate is string && data.nextDueDate.size() <= 50 &&
+        (!('daysRemaining' in data) || (data.daysRemaining is number)) &&
+        data.status in ['scheduled', 'completed', 'overdue'] &&
+        (!('assignedTo' in data) || (data.assignedTo is string && data.assignedTo.size() <= 100)) &&
+        (!('lastHistory' in data) || (data.lastHistory is string && data.lastHistory.size() <= 500));
+    }
+
+    // Inventory entity validation
+    function isValidInventory(data) {
+      return data.keys().hasAll(['name', 'location', 'quantity', 'minThreshold', 'unit', 'status']) &&
+        data.keys().hasOnly(['name', 'location', 'quantity', 'minThreshold', 'unit', 'status', 'lastUpdatedBy', 'updatedAt']) &&
+        data.name is string && data.name.size() <= 200 &&
+        data.location is string && data.location.size() <= 200 &&
+        data.quantity is number && data.quantity >= 0 &&
+        data.minThreshold is number && data.minThreshold >= 0 &&
+        data.unit is string && data.unit.size() <= 50 &&
+        data.status in ['ok', 'low'] &&
+        (!('lastUpdatedBy' in data) || (data.lastUpdatedBy is string && data.lastUpdatedBy.size() <= 100));
+    }
+
+    // Expense entity validation
+    function isValidExpense(data) {
+      return data.keys().hasAll(['date', 'equipmentOrLocation', 'description', 'responsibleParty', 'amount', 'createdByUid']) &&
+        data.keys().hasOnly(['date', 'equipmentOrLocation', 'description', 'responsibleParty', 'amount', 'recurrenceText', 'incidentId', 'createdByUid', 'createdAt']) &&
+        data.date is string && data.date.size() <= 50 &&
+        data.equipmentOrLocation is string && data.equipmentOrLocation.size() <= 200 &&
+        data.description is string && data.description.size() <= 1000 &&
+        data.responsibleParty is string && data.responsibleParty.size() <= 100 &&
+        data.amount is number && data.amount >= 0 &&
+        (!('recurrenceText' in data) || (data.recurrenceText is string && data.recurrenceText.size() <= 100)) &&
+        (!('incidentId' in data) || (data.incidentId is string && data.incidentId.size() <= 128)) &&
+        data.createdByUid is string && data.createdByUid.size() <= 128;
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isManager());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidUser(incoming()) &&
+        (isBootstrapManager() ? incoming().role == 'manager' : incoming().role in ['reception', 'technician']);
+      allow update: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && (
+        isManager() ||
+        (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']))
+      );
+      allow delete: if isSignedIn() && isManager() && request.auth.uid != userId;
+    }
+
+    // 2. Incidents Collection
+    match /incidents/{incidentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(incidentId) && isValidIncident(incoming()) && incoming().reportedByUid == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(incidentId) && isValidIncident(incoming()) && incoming().reportedByUid == existing().reportedByUid &&
+        (isManager() || isTechnician() || incoming().reportedByUid == request.auth.uid);
+      allow delete: if isSignedIn() && isManager();
+    }
+
+    // 3. Maintenance (PM) Collection
+    match /maintenance/{maintenanceId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(maintenanceId) && isValidMaintenance(incoming()) && (isManager() || isTechnician());
+      allow delete: if isSignedIn() && isManager();
+    }
+
+    // 4. Inventory Collection
+    match /inventory/{inventoryId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(inventoryId) && isValidInventory(incoming()) && (isManager() || isTechnician());
+      allow delete: if isSignedIn() && isManager();
+    }
+
+    // 5. Expenses Collection
+    match /expenses/{expenseId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(expenseId) && isValidExpense(incoming()) && (isManager() || isTechnician());
+      allow delete: if isSignedIn() && isManager();
+    }
+  }
+}
